@@ -1,4 +1,6 @@
 /*
+ * Copyright (c) 2010, W. van Engen, Stichting FOM, The Netherlands
+ *
  * Copyright (c) 2004-2006, Stockholms universitet
  * (Stockholm University, Stockholm Sweden)
  * All rights reserved.
@@ -695,6 +697,18 @@ has_session(void)
 static void
 read_conf_file(const char *fn)
 {
+    char *cert = malloc(PATH_MAX+1);
+    char *key = malloc(PATH_MAX+1);
+
+    snprintf(cert, PATH_MAX, "%s/.globus/usercert.pem", getenv("HOME"));
+    snprintf(key, PATH_MAX, "%s/.globus/userkey.pem", getenv("HOME"));
+
+    st_logf("adding default globus certificate\n");
+    add_certificate("default", cert, key, "globus-default", 0);
+
+    free(key);
+    free(cert);
+#if 0
     char buf[1024], *cert, *key, *id, *label, *s, *p;
     int anchor;
     FILE *f;
@@ -742,6 +756,7 @@ read_conf_file(const char *fn)
 
 	add_certificate(label, cert, key, id, anchor);
     }
+#endif
 }
 
 static CK_RV
@@ -779,7 +794,7 @@ C_Initialize(CK_VOID_PTR a)
     soft_token.object.num_objs = 0;
     
     soft_token.logfile = NULL;
-#if 0
+#if 1
     soft_token.logfile = stdout;
 #endif
 #if 0
@@ -794,30 +809,7 @@ C_Initialize(CK_VOID_PTR a)
 	st_logf("\tFlags\t%04x\n", (unsigned int)args->flags);
     }
 
-    {
-	char *fn = NULL, *home = NULL;
-
-	if (getuid() == geteuid()) {
-	    fn = getenv("SOFTPKCS11RC");
-	    if (fn)
-		fn = strdup(fn);
-	    home = getenv("HOME");
-	}
-	if (fn == NULL && home == NULL) {
-	    struct passwd *pw = getpwuid(getuid());	
-	    if(pw != NULL)
-		home = pw->pw_dir;
-	}
-	if (fn == NULL) {
-	    if (home)
-		asprintf(&fn, "%s/.soft-token.rc", home);
-	    else
-		fn = strdup("/etc/soft-token.rc");
-	}
-
-	read_conf_file(fn);
-	free(fn);
-    }
+    read_conf_file(NULL);
 
     return CKR_OK;
 }
@@ -851,10 +843,10 @@ C_GetInfo(CK_INFO_PTR args)
     snprintf_fill((char *)args->manufacturerID, 
 		  sizeof(args->manufacturerID),
 		  ' ',
-		  "SoftToken");
+		  "NIKHEF");
     snprintf_fill((char *)args->libraryDescription, 
 		  sizeof(args->libraryDescription), ' ',
-		  "SoftToken");
+		  "Globus Software Certificate");
     args->libraryVersion.major = 1;
     args->libraryVersion.minor = 8;
 
@@ -897,11 +889,11 @@ C_GetSlotInfo(CK_SLOT_ID slotID,
     snprintf_fill((char *)pInfo->slotDescription, 
 		  sizeof(pInfo->slotDescription),
 		  ' ',
-		  "SoftToken (slot)");
+		  "Globus Software Certificate");
     snprintf_fill((char *)pInfo->manufacturerID,
 		  sizeof(pInfo->manufacturerID),
 		  ' ',
-		  "SoftToken (slot)");
+		  "NIKHEF");
     pInfo->flags = CKF_TOKEN_PRESENT;
     if (soft_token.flags.hardware_slot)
 	pInfo->flags |= CKF_HW_SLOT;
@@ -924,19 +916,19 @@ C_GetTokenInfo(CK_SLOT_ID slotID,
     snprintf_fill((char *)pInfo->label, 
 		  sizeof(pInfo->label),
 		  ' ',
-		  "SoftToken (token)");
+		  "Globus Software Certificate"); /* (token) */
     snprintf_fill((char *)pInfo->manufacturerID, 
 		  sizeof(pInfo->manufacturerID),
 		  ' ',
-		  "SoftToken (token)");
+		  "NIKHEF");
     snprintf_fill((char *)pInfo->model,
 		  sizeof(pInfo->model),
 		  ' ',
-		  "SoftToken (token)");
+		  ""); /* (token) */
     snprintf_fill((char *)pInfo->serialNumber, 
 		  sizeof(pInfo->serialNumber),
 		  ' ',
-		  "4711");
+		  "4711"); /* TODO */
     pInfo->flags = 
 	CKF_TOKEN_INITIALIZED | 
 	CKF_USER_PIN_INITIALIZED;
@@ -1097,7 +1089,7 @@ C_Login(CK_SESSION_HANDLE hSession,
 
     if (pPin != NULL_PTR) {
 	asprintf(&pin, "%.*s", (int)ulPinLen, pPin);
-	st_logf("type: %d password: %s\n", (int)userType, pin);
+	st_logf("type: %d\n", (int)userType);
     }
 
     for (i = 0; i < soft_token.object.num_objs; i++) {
@@ -2047,3 +2039,5 @@ CK_FUNCTION_LIST funcs = {
     (void *)func_not_supported, /* C_CancelFunction */
     (void *)func_not_supported  /* C_WaitForSlotEvent */
 };
+
+// vim:ts=8:sw=4:noexpandtab:

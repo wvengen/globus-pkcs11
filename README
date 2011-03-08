@@ -1,4 +1,16 @@
 
+globus-pkcs11 is a software only pkcs11 implementation that works directly
+on a Globus certificate. It is based on soft-pkcs11 by Hörnquist Åstrand,
+modified to use the default Globus-certificate location to avoid
+configuration by the user.
+
+This is no more than a prototype for a certificate usability experiment,
+which was less succesful than I hoped.
+
+- Willem van Engen
+
+-----
+
 soft-pkcs11 is a software only pkcs11 implementation
 
 It is built to handle mozilla and the pkinit extension to heimdal, if
